@@ -57,6 +57,9 @@ obj-$(CONFIG_TOUCHSCREEN_STMPE)		+= stmpe-ts.o
 obj-$(CONFIG_TOUCHSCREEN_TI_TSCADC)	+= ti_tscadc.o
 obj-$(CONFIG_TOUCHSCREEN_TNETV107X)	+= tnetv107x-ts.o
 obj-$(CONFIG_TOUCHSCREEN_SYNAPTICS_I2C_RMI)	+= synaptics_i2c_rmi.o
+obj-$(CONFIG_TOUCHSCREEN_SWEEP2WAKE)		+= sweep2wake.o
+obj-$(CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE)	+= doubletap2wake.o
+obj-$(CONFIG_TOUCHSCREEN_SCROFF_VOLCTR)		+= scroff_volctr.o
 ifdef CONFIG_MACH_APQ8064_OMEGAR_KR
 obj-$(CONFIG_RMI4_I2C) +=synaptics_ds5/
 else
