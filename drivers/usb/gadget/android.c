@@ -17,9 +17,9 @@
  */
 
 /* 
- * DGMS MC-C05702-7 : Apply Autorun
- * CONFIG_USB_G_LGE_ANDROID_AUTORUN
- * CONFIG_USB_G_LGE_ANDROID_AUTORUN_LGE
+                                   
+                                   
+                                       
  */
 
 /* #define DEBUG */
@@ -91,15 +91,12 @@
 #include "f_accessory.c"
 
 #ifdef CONFIG_USB_G_LGE_ANDROID
-/* LGE_CHANGE
- * we must use ecm and rndis exclusively.
- * 2011-10-24, hyunhui.park@lge.com
+/*           
+                                         
+                                   
  */
 #include "f_ecm.c"
 #else
-#include "f_hid.h"
-#include "f_hid_android_keyboard.c"
-#include "f_hid_android_mouse.c"
 #define USB_ETH_RNDIS y
 #include "f_rndis.c"
 #include "rndis.c"
@@ -1847,7 +1844,7 @@ static struct android_usb_function charge_only_function = {
 	.cleanup	= charge_only_function_cleanup,
 	.bind_config	= charge_only_function_bind_config,
 };
-#endif /* CONFIG_USB_G_LGE_ANDROID_AUTORUN */
+#endif /*                                  */
 
 static int accessory_function_init(struct android_usb_function *f,
 					struct usb_composite_dev *cdev)
@@ -2047,41 +2044,6 @@ static struct android_usb_function uasp_function = {
 	.bind_config	= uasp_function_bind_config,
 };
 
-static int hid_function_init(struct android_usb_function *f, struct usb_composite_dev *cdev)
-{
-	return ghid_setup(cdev->gadget, 2);
-}
-
-static void hid_function_cleanup(struct android_usb_function *f)
-{
-	ghid_cleanup();
-}
-
-static int hid_function_bind_config(struct android_usb_function *f, struct usb_configuration *c)
-{
-	int ret;
-	printk(KERN_INFO "hid keyboard\n");
-	ret = hidg_bind_config(c, &ghid_device_android_keyboard, 0);
-	if (ret) {
-		pr_info("%s: hid_function_bind_config keyboard failed: %d\n", __func__, ret);
-		return ret;
-	}
-	printk(KERN_INFO "hid mouse\n");
-	ret = hidg_bind_config(c, &ghid_device_android_mouse, 1);
-	if (ret) {
-		pr_info("%s: hid_function_bind_config mouse failed: %d\n", __func__, ret);
-		return ret;
-	}
-	return 0;
-}
-
-static struct android_usb_function hid_function = {
-	.name		= "hid",
-	.init		= hid_function_init,
-	.cleanup	= hid_function_cleanup,
-	.bind_config	= hid_function_bind_config,
-};
-
 static struct android_usb_function *supported_functions[] = {
 	&mbim_function,
 //	&ecm_qc_function,
@@ -2116,7 +2078,6 @@ static struct android_usb_function *supported_functions[] = {
 #endif
 /* MSE-ADD-E iC Data Transfer 2012/05/22 */
 	&uasp_function,
-	&hid_function,
 	NULL
 };
 
@@ -2406,8 +2367,6 @@ functions_store(struct device *pdev, struct device_attribute *attr,
 						name);
 			}
 		}
-		/* HID driver always enabled, it's the whole point of this kernel patch */
-		android_enable_function(dev, conf, "hid");
 	}
 
 	/* Free uneeded configurations if exists */
@@ -2698,7 +2657,7 @@ field ## _store(struct device *dev, struct device_attribute *attr,	\
 	return size;							\
 }									\
 static DEVICE_ATTR(field, S_IRUGO | S_IWUSR, field ## _show, field ## _store);
-#endif /* CONFIG_USB_G_LGE_ANDROID */
+#endif /*                          */
 
 DESCRIPTOR_ATTR(idVendor, "%04x\n")
 DESCRIPTOR_ATTR(idProduct, "%04x\n")
@@ -2855,7 +2814,7 @@ static void android_lge_factory_bind(struct usb_composite_dev *cdev)
 		}
 	}
 }
-#endif /* CONFIG_USB_G_LGE_ANDROID && CONFIG_LGE_PM */
+#endif /*                                           */
 
 static int android_bind_config(struct usb_configuration *c)
 {
@@ -2921,7 +2880,7 @@ static int android_bind(struct usb_composite_dev *cdev)
 	strings_dev[STRING_PRODUCT_IDX].id = id;
 	device_desc.iProduct = id;
 #ifdef CONFIG_USB_G_LGE_ANDROID
-	/* Default string as LGE products */
+	/*                                */
 	ret = lgeusb_get_manufacturer_name(lge_manufacturer);
 	if (!ret)
 		strlcpy(manufacturer_string, lge_manufacturer,

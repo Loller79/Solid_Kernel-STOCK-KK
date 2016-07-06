@@ -374,11 +374,6 @@ EXPORT_SYMBOL_GPL(device_set_wakeup_enable);
  */
 static void wakeup_source_activate(struct wakeup_source *ws)
 {
-	/*
-	 * active wakeup source should bring the system
-	 * out of PM_SUSPEND_FREEZE state
-	 */
-	freeze_wake();
 #if defined (CONFIG_MACH_APQ8064_OMEGA) || defined (CONFIG_MACH_APQ8064_OMEGAR)
 	extern int boost_freq;
 	extern bool suspend_marker_entry;

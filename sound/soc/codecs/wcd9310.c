@@ -42,11 +42,11 @@
 #define CONFIG_USE_REMOVE_AUX_NOISE //http://lap.lge.com:8145/lap/#/c/195681/
 #include <linux/regulator/consumer.h> //http://lap.lge.com:8145/lap/107633
 #endif
-// [[CONFIG_LGE_AUDIO,  Audience eS325 ALSA SoC Audio driver
+//                                                          
 #if defined(CONFIG_SND_SOC_ES325_SLIM)
 #include <sound/es325-export.h>
 #endif /* CONFIG_SND_SOC_ES325_SLIM */
-// ]]CONFIG_LGE_AUDIO,  Audience eS325 ALSA SoC Audio driver
+//                                                          
 
 static int cfilt_adjust_ms = 10;
 module_param(cfilt_adjust_ms, int, 0644);
@@ -1199,10 +1199,10 @@ static const struct snd_kcontrol_new tabla_snd_controls[] = {
 	SOC_SINGLE_TLV("HPHR Volume", TABLA_A_RX_HPH_R_GAIN, 0, 12, 1,
 		line_gain),
 
-/* LGE_CHANGED_START 2012.05.03, sehwan.lee@lge.com
- * change the digital_gain's Min value -84 -> -60, because UCM off-line tunning Issue
+/*                                                 
+                                                                                     
  */ 
-#if defined(CONFIG_LGE_AUDIO) || defined(CONFIG_MACH_APQ8064_AWIFI) /* LGE_CODE */
+#if defined(CONFIG_LGE_AUDIO) || defined(CONFIG_MACH_APQ8064_AWIFI) /*          */
 	SOC_SINGLE_S8_TLV("RX1 Digital Volume", TABLA_A_CDC_RX1_VOL_CTL_B2_CTL,
 		-60, 40, digital_gain),
 	SOC_SINGLE_S8_TLV("RX2 Digital Volume", TABLA_A_CDC_RX2_VOL_CTL_B2_CTL,
@@ -1275,7 +1275,7 @@ static const struct snd_kcontrol_new tabla_snd_controls[] = {
 	SOC_SINGLE_S8_TLV("DEC10 Volume", TABLA_A_CDC_TX10_VOL_CTL_GAIN, -84,
 		40, digital_gain),
 #endif
-/* LGE_CHANGED_END 2012.05.03, sehwan.lee@lge.com */
+/*                                                */
 	SOC_SINGLE_S8_TLV("IIR1 INP1 Volume", TABLA_A_CDC_IIR1_GAIN_B1_CTL, -84,
 		40, digital_gain),
 	SOC_SINGLE_S8_TLV("IIR1 INP2 Volume", TABLA_A_CDC_IIR1_GAIN_B2_CTL, -84,
@@ -4030,7 +4030,6 @@ static int tabla_readable(struct snd_soc_codec *ssc, unsigned int reg)
 
 	return tabla_reg_readable[reg];
 }
-
 static bool tabla_is_digital_gain_register(unsigned int reg)
 {
 	bool rtn = false;
@@ -4097,18 +4096,24 @@ static int tabla_volatile(struct snd_soc_codec *ssc, unsigned int reg)
 
 	return 0;
 }
+
 #define TABLA_FORMATS (SNDRV_PCM_FMTBIT_S16_LE)
+static int tabla_write(struct snd_soc_codec *codec, unsigned int reg,
+	unsigned int value)
+{
+	int ret;
+	BUG_ON(reg > TABLA_MAX_REGISTER);
 
-#ifdef CONFIG_SOUND_CONTROL_HAX_3_GPL
-extern int snd_hax_reg_access(unsigned int);
-extern unsigned int snd_hax_cache_read(unsigned int);
-extern void snd_hax_cache_write(unsigned int, unsigned int);
-#endif
+	if (!tabla_volatile(codec, reg)) {
+		ret = snd_soc_cache_write(codec, reg, value);
+		if (ret != 0)
+			dev_err(codec->dev, "Cache write to %x failed: %d\n",
+				reg, ret);
+	}
 
-#ifndef CONFIG_SOUND_CONTROL_HAX_3_GPL
-static
-#endif
-unsigned int tabla_read(struct snd_soc_codec *codec,
+	return wcd9xxx_reg_write(codec->control_data, reg, value);
+}
+static unsigned int tabla_read(struct snd_soc_codec *codec,
 				unsigned int reg)
 {
 	unsigned int val;
@@ -4129,46 +4134,6 @@ unsigned int tabla_read(struct snd_soc_codec *codec,
 	val = wcd9xxx_reg_read(codec->control_data, reg);
 	return val;
 }
-#ifdef CONFIG_SOUND_CONTROL_HAX_3_GPL
-EXPORT_SYMBOL(tabla_read);
-#endif
-
-#ifndef CONFIG_SOUND_CONTROL_HAX_3_GPL
-static
-#endif
-int tabla_write(struct snd_soc_codec *codec, unsigned int reg,
-	unsigned int value)
-{
-	int ret;
-#ifdef CONFIG_SOUND_CONTROL_HAX_3_GPL
-	int val;
-#endif
-
-	BUG_ON(reg > TABLA_MAX_REGISTER);
-
-	if (!tabla_volatile(codec, reg)) {
-		ret = snd_soc_cache_write(codec, reg, value);
-		if (ret != 0)
-			dev_err(codec->dev, "Cache write to %x failed: %d\n",
-				reg, ret);
-	}
-#ifdef CONFIG_SOUND_CONTROL_HAX_3_GPL
-	if (!snd_hax_reg_access(reg)) {
-		if (!((val = snd_hax_cache_read(reg)) != -1)) {
-			val = wcd9xxx_reg_read_safe(codec->control_data, reg);
-		}
-	} else {
-		snd_hax_cache_write(reg, value);
-		val = value;
-	}
-	return wcd9xxx_reg_write(codec->control_data, reg, val);
-#else
-	return wcd9xxx_reg_write(codec->control_data, reg, value);
-#endif
-}
-#ifdef CONFIG_SOUND_CONTROL_HAX_3_GPL
-EXPORT_SYMBOL(tabla_write);
-#endif
 
 static s16 tabla_get_current_v_ins(struct tabla_priv *tabla, bool hu)
 {
@@ -4279,12 +4244,12 @@ static void tabla_shutdown(struct snd_pcm_substream *substream,
 		 substream->name, substream->stream);
 	if (tabla->intf_type != WCD9XXX_INTERFACE_TYPE_SLIMBUS)
 		return;
-// [[CONFIG_LGE_AUDIO,  Audience eS325 ALSA SoC Audio driver
+//                                                          
 #if defined(CONFIG_SND_SOC_ES325_SLIM)
 	pr_debug("%s(): id = %d ch_mask = %d name = %s\n" , __func__,
 		 dai->id, tabla->dai[dai->id-1].ch_mask, tabla->codec->name);
 #endif /* CONFIG_SND_SOC_ES325_SLIM */
-// ]]CONFIG_LGE_AUDIO,  Audience eS325 ALSA SoC Audio driver
+//                                                          
 
 	if (dai->id <= NUM_CODEC_DAIS) {
 		if (tabla->dai[dai->id-1].ch_mask) {
@@ -4421,12 +4386,12 @@ static int tabla_set_channel_map(struct snd_soc_dai *dai,
 
 	if (dai->id == AIF1_PB || dai->id == AIF2_PB || dai->id == AIF3_PB) {
 		for (i = 0; i < rx_num; i++) {
-// [[CONFIG_LGE_AUDIO,  Audience eS325 ALSA SoC Audio driver
+//                                                          
 #if defined(CONFIG_SND_SOC_ES325_SLIM)
 			pr_debug("%s(): rx ch_num[%d]\n",
 					__func__, rx_slot[i]);
 #endif /* CONFIG_SND_SOC_ES325_SLIM */
-// ]]CONFIG_LGE_AUDIO,  Audience eS325 ALSA SoC Audio driver
+//                                                          
 			tabla->dai[dai->id - 1].ch_num[i]  = rx_slot[i];
 			tabla->dai[dai->id - 1].ch_act = 0;
 			tabla->dai[dai->id - 1].ch_tot = rx_num;
@@ -4447,7 +4412,7 @@ static int tabla_set_channel_map(struct snd_soc_dai *dai,
 		}
 
 		tabla->dai[dai->id - 1].ch_act = 0;
-// [[CONFIG_LGE_AUDIO,  Audience eS325 ALSA SoC Audio driver
+//                                                          
 #if defined(CONFIG_SND_SOC_ES325_SLIM)
 		for (i = 0; i < tx_num; i++) {
 			tabla->dai[dai->id - 1].ch_num[i]  = tx_slot[i];
@@ -4457,7 +4422,7 @@ static int tabla_set_channel_map(struct snd_soc_dai *dai,
 		for (i = 0; i < tx_num; i++)
 			tabla->dai[dai->id - 1].ch_num[i]  = tx_slot[i];
 #endif /* CONFIG_SND_SOC_ES325_SLIM */
-// ]]CONFIG_LGE_AUDIO,  Audience eS325 ALSA SoC Audio driver
+//                                                          
 	}
 	return 0;
 }
@@ -4478,11 +4443,11 @@ static int tabla_get_channel_map(struct snd_soc_dai *dai,
 		return -EINVAL;
 	}
 
-// [[CONFIG_LGE_AUDIO,  Audience eS325 ALSA SoC Audio driver
+//                                                          
 #if defined(CONFIG_SND_SOC_ES325_SLIM)
 	pr_info("GAC:%s(): dai->id = %d\n", __func__, dai->id);
 #endif /* CONFIG_SND_SOC_ES325_SLIM */
-// ]]CONFIG_LGE_AUDIO,  Audience eS325 ALSA SoC Audio driver
+//                                                          
 	/* for virtual port, codec driver needs to do
 	 * housekeeping, for now should be ok
 	 */
@@ -4881,7 +4846,7 @@ static int tabla_hw_params(struct snd_pcm_substream *substream,
 	return 0;
 }
 
-// [[CONFIG_LGE_AUDIO,  Audience eS325 ALSA SoC Audio driver
+//                                                          
 #if defined(CONFIG_SND_SOC_ES325_SLIM)
 static int tabla_es325_hw_params(struct snd_pcm_substream *substream,
 		struct snd_pcm_hw_params *params,
@@ -4964,7 +4929,7 @@ static struct snd_soc_dai_ops tabla_dai_ops = {
 	.get_channel_map = tabla_get_channel_map,
 };
 #endif /* CONFIG_SND_SOC_ES325_SLIM */
-// ]]CONFIG_LGE_AUDIO,  Audience eS325 ALSA SoC Audio driver
+//                                                          
 
 static struct snd_soc_dai_driver tabla_dai[] = {
 	{
@@ -5156,11 +5121,11 @@ static int tabla_codec_enable_slimrx(struct snd_soc_dapm_widget *w,
 				break;
 			}
 		}
-// [[CONFIG_LGE_AUDIO,  Audience eS325 ALSA SoC Audio driver
+//                                                          
 #if defined(CONFIG_SND_SOC_ES325_SLIM)
 		pr_info("%s: act=%d tot=%d\n", __func__, tabla_p->dai[j].ch_act, tabla_p->dai[j].ch_tot);
 #endif /* CONFIG_SND_SOC_ES325_SLIM */
-// ]]CONFIG_LGE_AUDIO,  Audience eS325 ALSA SoC Audio driver
+//                                                          
 		if (tabla_p->dai[j].ch_act == tabla_p->dai[j].ch_tot) {
 			ret = tabla_codec_enable_chmask(tabla_p,
 							SND_SOC_DAPM_POST_PMU,
@@ -5169,12 +5134,12 @@ static int tabla_codec_enable_slimrx(struct snd_soc_dapm_widget *w,
 					tabla_p->dai[j].ch_num,
 					tabla_p->dai[j].ch_tot,
 					tabla_p->dai[j].rate);
-// [[CONFIG_LGE_AUDIO,  Audience eS325 ALSA SoC Audio driver
+//                                                          
 #if defined(CONFIG_SND_SOC_ES325_SLIM)
 			ret = es325_remote_cfg_slim_rx(tabla_dai[j].id);
 			pr_info("%s: ret=%d, ch_num=%d, rate=%d \n", __func__, ret, *(tabla_p->dai[j].ch_num), tabla_p->dai[j].rate);
 #endif /* CONFIG_SND_SOC_ES325_SLIM */
-// ]]CONFIG_LGE_AUDIO,  Audience eS325 ALSA SoC Audio driver
+//                                                          
 		}
 		break;
 	case SND_SOC_DAPM_POST_PMD:
@@ -5191,11 +5156,11 @@ static int tabla_codec_enable_slimrx(struct snd_soc_dapm_widget *w,
 			}
 		}
 		if (!tabla_p->dai[j].ch_act) {
-// [[CONFIG_LGE_AUDIO,  Audience eS325 ALSA SoC Audio driver
+//                                                          
 #if defined(CONFIG_SND_SOC_ES325_SLIM)
 			ret = es325_remote_close_slim_rx(tabla_dai[j].id);
 #endif /* CONFIG_SND_SOC_ES325_SLIM */
-// ]]CONFIG_LGE_AUDIO,  Audience eS325 ALSA SoC Audio driver
+//                                                          
 			ret = wcd9xxx_close_slim_sch_rx(tabla,
 						tabla_p->dai[j].ch_num,
 						tabla_p->dai[j].ch_tot);
@@ -5273,11 +5238,11 @@ static int tabla_codec_enable_slimtx(struct snd_soc_dapm_widget *w,
 						tabla_p->dai[j].ch_num,
 						tabla_p->dai[j].ch_tot,
 						tabla_p->dai[j].rate);
-// [[CONFIG_LGE_AUDIO,  Audience eS325 ALSA SoC Audio driver
+//                                                          
 #if defined(CONFIG_SND_SOC_ES325_SLIM)
 			ret = es325_remote_cfg_slim_tx(tabla_dai[j].id);
 #endif /* CONFIG_SND_SOC_ES325_SLIM */
-// ]]CONFIG_LGE_AUDIO,  Audience eS325 ALSA SoC Audio driver
+//                                                          
 		}
 		break;
 	case SND_SOC_DAPM_POST_PMD:
@@ -5293,11 +5258,11 @@ static int tabla_codec_enable_slimtx(struct snd_soc_dapm_widget *w,
 			}
 		}
 		if (!tabla_p->dai[j].ch_act) {
-// [[CONFIG_LGE_AUDIO,  Audience eS325 ALSA SoC Audio driver
+//                                                          
 #if defined(CONFIG_SND_SOC_ES325_SLIM)
 			ret = es325_remote_close_slim_tx(tabla_dai[j].id);
 #endif /* CONFIG_SND_SOC_ES325_SLIM */
-// ]]CONFIG_LGE_AUDIO,  Audience eS325 ALSA SoC Audio driver
+//                                                          
 			ret = wcd9xxx_close_slim_sch_tx(tabla,
 						tabla_p->dai[j].ch_num,
 						tabla_p->dai[j].ch_tot);
@@ -8626,8 +8591,8 @@ static void tabla_update_reg_address(struct tabla_priv *priv)
 
 #ifdef CONFIG_SWITCH_MAX1462X
 
-/* LGE_CHANGED_START 2012.10.25, gyuhwa.park@lge.com
- * PMIC L10 Control
+/*                                                  
+                   
  */ 
 static bool max1462x_mic_bias = false;
 
@@ -8664,15 +8629,15 @@ void set_headset_mic_bias_l10(int on)
  
 }
 
-/* LGE_CHANGED_END 2012.10.25, gyuhwa.park@lge.com */
+/*                                                 */
 
 #endif /* CONFIG_SWITCH_MAX1462X */
 
 #ifdef CONFIG_SWITCH_FSA8008
 /*
-* 2012-02-06, mint.choi@lge.com
-* Enable/disable fsa8008 mic bias when inserting and removing
-* this API called by fsa8008 driver
+                               
+                                                             
+                                   
 */
 
 void tabla_codec_micbias2_ctl(int enable)
@@ -8710,7 +8675,7 @@ void set_headset_mic_bias_l29(int on)
 			pr_err("%s: regulator get of vreg_l29 failed (%ld)\n", __func__, PTR_ERR(vreg_l29)); 
 		}
 
-//[LGE] seungkyu.joo, 2012-12-18 , HW Request for enabling apple headset mic
+//                                                                          
 #if 1//defined(CONFIG_MACH_APQ8064_J1SK)|| defined(CONFIG_MACH_APQ8064_J1KT)|| defined(CONFIG_MACH_APQ8064_J1U)|| defined(CONFIG_MACH_APQ8064_J1A)
 	//||defined(CONFIG_MACH_APQ8064_J1R) || defined(CONFIG_MACH_APQ8064_J1B) || defined(CONFIG_MACH_APQ8064_J1TL) || defined(CONFIG_MACH_APQ8064_J1SP)
 		rc = regulator_set_voltage(vreg_l29, 2700000, 2700000);
@@ -8855,15 +8820,6 @@ static const struct file_operations codec_mbhc_debug_ops = {
 };
 #endif
 
-#ifdef CONFIG_SOUND_CONTROL_HAX_3_GPL
-struct snd_kcontrol_new *gpl_faux_snd_controls_ptr =
-		(struct snd_kcontrol_new *)tabla_snd_controls;
-struct snd_soc_codec *fauxsound_codec_ptr;
-EXPORT_SYMBOL(fauxsound_codec_ptr);
-int wcd9xxx_hw_revision;
-EXPORT_SYMBOL(wcd9xxx_hw_revision);
-#endif
-
 static int tabla_codec_probe(struct snd_soc_codec *codec)
 {
 	struct wcd9xxx *control;
@@ -8873,22 +8829,10 @@ static int tabla_codec_probe(struct snd_soc_codec *codec)
 	int i;
 	int ch_cnt;
 
-#ifdef CONFIG_SOUND_CONTROL_HAX_3_GPL
-	pr_info("tabla codec probe...\n");
-	fauxsound_codec_ptr = codec;
-#endif
-
 	codec->control_data = dev_get_drvdata(codec->dev->parent);
 	control = codec->control_data;
 
-#ifdef CONFIG_SOUND_CONTROL_HAX_3_GPL
-	if (TABLA_IS_2_0(control->version))
-		wcd9xxx_hw_revision = 1;
-	else
-		wcd9xxx_hw_revision = 2;
-#endif
 	tabla = kzalloc(sizeof(struct tabla_priv), GFP_KERNEL);
-
 	if (!tabla) {
 		dev_err(codec->dev, "Failed to allocate private data\n");
 		return -ENOMEM;
@@ -8955,11 +8899,11 @@ static int tabla_codec_probe(struct snd_soc_codec *codec)
 //	snd_soc_dapm_new_controls(dapm, tabla_dapm_widgets,
 //				  ARRAY_SIZE(tabla_dapm_widgets));
 
-// [[CONFIG_LGE_AUDIO,  Audience eS325 ALSA SoC Audio driver
+//                                                          
 #if defined(CONFIG_SND_SOC_ES325_SLIM)
 	es325_remote_add_codec_controls(codec);
 #endif /* CONFIG_SND_SOC_ES325_SLIM */
-// ]]CONFIG_LGE_AUDIO,  Audience eS325 ALSA SoC Audio driver
+//                                                          
 
 	snd_soc_dapm_new_controls(dapm, tabla_dapm_aif_in_widgets,
 				  ARRAY_SIZE(tabla_dapm_aif_in_widgets));
