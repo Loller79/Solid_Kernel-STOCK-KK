@@ -89,6 +89,9 @@
 //#include "f_ccid.c"
 #include "f_mtp.c"
 #include "f_accessory.c"
+#include "f_hid.h"
+#include "f_hid_android_keyboard.c"
+#include "f_hid_android_mouse.c"
 
 #ifdef CONFIG_USB_G_LGE_ANDROID
 /*           
@@ -97,9 +100,6 @@
  */
 #include "f_ecm.c"
 #else
-#include "f_hid.h"
-#include "f_hid_android_keyboard.c"
-#include "f_hid_android_mouse.c"
 #define USB_ETH_RNDIS y
 #include "f_rndis.c"
 #include "rndis.c"

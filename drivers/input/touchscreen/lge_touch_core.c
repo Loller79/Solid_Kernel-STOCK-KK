@@ -199,6 +199,9 @@ int cur_hopping_idx = 3;
 extern int cns_en;
 static struct hrtimer hr_touch_trigger_timer;
 #define MS_TO_NS(x)	(x * 1E6L)
+
+static bool has_suspended = false;
+
 #ifdef MULTI_GHOST_DETECT
 void multi_ghost_detection(struct work_struct *work_multi_ghost)
 {

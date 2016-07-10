@@ -23,10 +23,10 @@
 #include <linux/platform_device.h>
 #include <linux/module.h>
 #include <linux/device.h>
-#ifdef CONFIG_POWERSUSPEND
-#include <linux/powersuspend.h>
-#else
+#ifndef CONFIG_HAS_EARLYSUSPEND
 #include <linux/lcd_notify.h>
+#else
+#include <linux/earlysuspend.h>
 #endif
 
 #define DEBUG 0
@@ -40,7 +40,7 @@
 #define DEFAULT_MAX_CPUS_ONLINE_SUSP	1
 #define DEFAULT_SUSPEND_DEFER_TIME	10
 #define DEFAULT_DOWN_LOCK_DUR		500
-#define MSM_MPDEC_IDLE_FREQ		189000
+#define MSM_MPDEC_IDLE_FREQ		486000
 
 enum {
 	MSM_MPDEC_DISABLED = 0,
@@ -49,7 +49,7 @@ enum {
 	MSM_MPDEC_UP,
 };
 
-#ifndef CONFIG_POWERSUSPEND
+#ifndef CONFIG_HAS_EARLYSUSPEND
 static struct notifier_block notif;
 #endif
 static struct delayed_work hotplug_work;
@@ -324,26 +324,28 @@ static void __ref bricked_hotplug_resume(struct work_struct *work)
 	}
 }
 
-#ifdef CONFIG_POWERSUSPEND
-static void __bricked_hotplug_suspend(struct power_suspend *handler)
+#ifndef CONFIG_HAS_EARLYSUSPEND
+static void bricked_hotplug_early_suspend(struct early_suspend *handler)
 {
 	INIT_DELAYED_WORK(&suspend_work, bricked_hotplug_suspend);
 	queue_delayed_work_on(0, susp_wq, &suspend_work,
 			msecs_to_jiffies(hotplug.suspend_defer_time * 1000));
 }
 
-static void __ref __bricked_hotplug_resume(struct power_suspend *handler)
+static void __ref bricked_hotplug_late_resume(struct early_suspend *handler)
 {
 	flush_workqueue(susp_wq);
 	cancel_delayed_work_sync(&suspend_work);
 	queue_work_on(0, susp_wq, &resume_work);
 }
 
-static struct power_suspend bricked_hotplug_power_suspend_driver = {
-	.suspend = __bricked_hotplug_suspend,
-	.resume = __bricked_hotplug_resume,
+static struct early_suspend bricked_hotplug_early_suspend_handler = {
+	.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN,
+	.suspend = bricked_hotplug_suspend,
+	.resume = bricked_hotplug_resume,
 };
-#else
+#endif
+#ifndef CONFIG_HAS_EARLYSUSPEND
 static int lcd_notifier_callback(struct notifier_block *this,
 				unsigned long event, void *data) {
 
@@ -396,11 +398,12 @@ static int bricked_hotplug_start(void)
 		goto err_dev;
 	}
 
-#ifdef CONFIG_POWERSUSPEND
-	register_power_suspend(&bricked_hotplug_power_suspend_driver);
-#else
-	notif.notifier_call = lcd_notifier_callback;
-	if (lcd_register_client(&notif) != 0) {
+#ifndef CONFIG_HAS_EARLYSUSPEND
+	register_early_suspend(&bricked_hotplug_early_suspend_handler);
+#endif
+#ifndef CONFIG_HAS_EARLYSUSPEND
+	lcd_notif.notifier_call = lcd_notifier_callback;
+	if (lcd_register_client(&lcd_notif) != 0) {
 		pr_err("%s: Failed to register lcd callback\n", __func__);
 		ret = -EINVAL;
 		goto err_susp;
@@ -424,7 +427,7 @@ static int bricked_hotplug_start(void)
 					msecs_to_jiffies(hotplug.startdelay));
 
 	return ret;
-#ifndef CONFIG_POWERSUSPEND
+#ifndef CONFIG_HAS_EARLYSUSPEND
 err_susp:
 	destroy_workqueue(susp_wq);
 #endif
@@ -451,9 +454,10 @@ static void bricked_hotplug_stop(void)
 	cancel_delayed_work_sync(&hotplug_work);
 	mutex_destroy(&hotplug.bricked_hotplug_mutex);
 	mutex_destroy(&hotplug.bricked_cpu_mutex);
-#ifdef CONFIG_POWERSUSPEND
-	unregister_power_suspend(&bricked_hotplug_power_suspend_driver);
-#else
+#ifndef CONFIG_HAS_EARLYSUSPEND
+	unregister_early_suspend(&bricked_hotplug_early_suspend_handler);
+#endif
+#ifndef CONFIG_HAS_EARLYSUSPEND
 	lcd_unregister_client(&notif);
 #endif
 	destroy_workqueue(susp_wq);
